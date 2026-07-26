@@ -1,25 +1,33 @@
-# FastAPI Setup
+# 나의 일기(내일)
 
-## 1) Python 설치
-이 환경에서는 아직 Python이 설치되어 있지 않습니다. 먼저 Python 3.11+를 설치하세요.
+`나의 일기(내일)`은 앞으로 할 일을 정하고, 지나간 하루를 사진과 글로 남기는 장소 기반 일기 및 일정 앱입니다.
 
-## 2) 환경변수 파일 준비
-```powershell
-Copy-Item .env.example .env
+이 저장소는 FastAPI 백엔드와 React(Vite) 프론트엔드로 구성되어 있습니다.
+
+## 문서
+
+- [제품 기획서](./docs/PRODUCT_SPEC.md)
+- [개발 인수인계 문서](./docs/DEVELOPMENT_BRIEF.md)
+- [AI 도구 이해 노트](./docs/AI_WORKFLOW_NOTES.md)
+
+다른 개발자는 위 문서 두 개를 먼저 읽고 MVP 범위, 데이터 모델, API, 화면 구조를 확인하면 됩니다.
+
+## 프로젝트 구조
+
+```text
+app/        FastAPI backend
+tests/      Backend tests
+frontend/   React frontend
+docs/       Product and development documents
 ```
 
-## 3) 가상환경 및 의존성 설치
-PowerShell에서 `date-app`로 이동 후:
+## 백엔드 실행
 
 ```powershell
 py -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
-```
-
-## 4) 서버 실행
-```powershell
 uvicorn app.main:app --reload
 ```
 
@@ -27,12 +35,31 @@ uvicorn app.main:app --reload
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - Health: `http://127.0.0.1:8000/api/v1/health`
 
-## 5) 테스트 실행
+## 백엔드 테스트
+
 ```powershell
 pytest -q
 ```
 
+## 프론트엔드 실행
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+PowerShell 실행 정책 때문에 `npm`이 막히면 `npm.cmd`를 사용하세요.
+
+## 프론트엔드 빌드
+
+```powershell
+cd frontend
+npm.cmd run build
+```
+
 ## Docker 실행
+
 ```powershell
 docker compose up --build
 ```
