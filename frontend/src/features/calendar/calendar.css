@@ -1,0 +1,238 @@
+.calendar-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Header (sticky calendar) ── */
+.calendar-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 48px 16px 8px;
+}
+
+.calendar-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.calendar-header__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.calendar-header__nav {
+  display: flex;
+  gap: 4px;
+}
+
+.calendar-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: background 0.15s;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Weekday row */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-disabled);
+  padding: 4px 0;
+}
+
+.calendar-weekday--sun { color: var(--color-sunday); }
+.calendar-weekday--sat { color: var(--color-saturday); }
+
+/* Grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.calendar-day__num {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.calendar-day__num--selected {
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.calendar-day__num--today {
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
+  font-weight: 600;
+}
+
+.calendar-day__num--sun { color: var(--color-sunday); }
+.calendar-day__num--sat { color: var(--color-saturday); }
+
+.calendar-day__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  margin-top: 2px;
+  transition: background 0.15s;
+}
+
+.calendar-day__dot--visible {
+  background: var(--color-primary);
+}
+
+/* ── Body (schedule list for selected day) ── */
+.calendar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.calendar-body__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.calendar-body__date-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.calendar-body__add-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+.calendar-body__add-btn svg {
+  stroke: currentColor;
+}
+
+/* Empty state */
+.calendar-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 0;
+  gap: 8px;
+  color: var(--color-text-disabled);
+  font-size: 14px;
+}
+
+.calendar-empty__icon {
+  font-size: 36px;
+}
+
+/* Schedule cards */
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s;
+}
+
+.schedule-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.schedule-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-card__badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-bottom: 6px;
+}
+
+.schedule-card__badge--planned {
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
+}
+
+.schedule-card__badge--completed {
+  background: var(--color-orange-light);
+  color: var(--color-orange-text);
+}
+
+.schedule-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-card__meta {
+  font-size: 12px;
+  color: var(--color-text-disabled);
+  margin-top: 2px;
+}
+
+.schedule-card__arrow {
+  color: var(--color-border);
+  flex-shrink: 0;
+}
+
+.schedule-card__arrow svg {
+  stroke: currentColor;
+}

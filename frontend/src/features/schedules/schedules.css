@@ -1,0 +1,455 @@
+/* ── Schedule List ── */
+.slist-page {
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+.slist-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 48px 16px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.slist-page__heading {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.slist-page__add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
+}
+
+.slist-page__add-btn svg {
+  stroke: currentColor;
+}
+
+.slist-page__body {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.slist-section__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-disabled);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.slist-section__empty {
+  font-size: 13px;
+  color: var(--color-text-disabled);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.slist-section__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Schedule card (list view) */
+.slist-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s;
+}
+
+.slist-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.slist-card__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.slist-card__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.slist-card__badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.slist-card__badge--planned {
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
+}
+
+.slist-card__badge--completed {
+  background: var(--color-orange-light);
+  color: var(--color-orange-text);
+}
+
+.slist-card__date {
+  font-size: 12px;
+  color: var(--color-text-disabled);
+}
+
+.slist-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slist-card__places {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-disabled);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.slist-card__pin svg { stroke: currentColor; }
+
+.slist-card__diary {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slist-card__arrow {
+  color: var(--color-border);
+  flex-shrink: 0;
+}
+.slist-card__arrow svg { stroke: currentColor; }
+
+/* ── Schedule Detail ── */
+.sdetail-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-disabled);
+  font-size: 14px;
+}
+
+.sdetail-page {
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+.sdetail-header {
+  background: var(--color-surface);
+  padding: 48px 16px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.sdetail-header__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sdetail-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  margin-left: -8px;
+  transition: background 0.15s;
+}
+
+.sdetail-back-btn:hover { background: var(--color-surface-hover); }
+.sdetail-back-btn svg { stroke: currentColor; }
+
+.sdetail-header__title {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sdetail-header__badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.sdetail-header__badge--planned {
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
+}
+
+.sdetail-header__badge--completed {
+  background: var(--color-orange-light);
+  color: var(--color-orange-text);
+}
+
+.sdetail-header__time {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.sdetail-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sdetail-section {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.sdetail-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.sdetail-section__title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sdetail-section__edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.sdetail-section__edit svg { stroke: currentColor; }
+
+/* Places */
+.sdetail-places {
+  display: flex;
+  flex-direction: column;
+}
+
+.sdetail-place {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.sdetail-place:last-child { border-bottom: none; }
+
+.sdetail-place__order {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary-text);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sdetail-place__info { flex: 1; min-width: 0; }
+
+.sdetail-place__name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sdetail-place__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.sdetail-place__name--visited {
+  color: var(--color-text-disabled);
+  text-decoration: line-through;
+}
+
+.sdetail-place__check {
+  font-size: 13px;
+  color: #4ade80;
+}
+
+.sdetail-place__address {
+  font-size: 12px;
+  color: var(--color-text-disabled);
+  margin-top: 2px;
+}
+
+.sdetail-place__memo {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
+
+/* Diary */
+.sdetail-diary {
+  padding: 16px;
+}
+
+.sdetail-diary__mood {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.sdetail-diary__content {
+  font-size: 15px;
+  color: var(--color-text-primary);
+  line-height: 1.7;
+}
+
+.sdetail-diary-empty {
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.sdetail-diary-empty p {
+  font-size: 14px;
+  color: var(--color-text-disabled);
+  margin-bottom: 12px;
+}
+
+.sdetail-diary-empty__btn {
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: var(--radius-lg);
+}
+
+/* ── Schedule New ── */
+.snew-page {
+  min-height: 100%;
+  background: var(--color-bg);
+}
+
+.snew-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  padding: 48px 16px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.snew-header__title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.snew-form {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.snew-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.snew-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.snew-form__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.snew-form__input {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.snew-form__input:focus {
+  border-color: var(--color-primary);
+}
+
+.snew-form__textarea {
+  resize: none;
+}
+
+.snew-form__submit {
+  margin-top: 8px;
+  width: 100%;
+  padding: 15px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  transition: background 0.15s;
+}
+
+.snew-form__submit:hover {
+  background: var(--color-primary-hover);
+}

@@ -1,0 +1,16 @@
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  background: var(--color-surface);
+  box-shadow: 0 0 40px rgba(0,0,0,0.08);
+}
+
+.app-layout__content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--color-bg);
+}
