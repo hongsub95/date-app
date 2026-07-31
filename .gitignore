@@ -1,0 +1,46 @@
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.secret
+secrets/
+
+# Local agent / assistant state
+.codex/
+.agents/
+CLAUDE.md
+claude_desktop_config.json
+config.toml
+
+# Python
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite-cache/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,5 +1,16 @@
 fastapi==0.115.12
 uvicorn[standard]==0.34.2
+pydantic-settings==2.9.1
+
+# Database
+sqlalchemy==2.0.41
+psycopg2-binary==2.9.10
+alembic==1.16.2
+
+# Auth
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# Test
 pytest==8.3.5
 httpx==0.28.1
-pydantic-settings==2.9.1
