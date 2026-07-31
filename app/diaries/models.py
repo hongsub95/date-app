@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -17,8 +17,8 @@ class DiaryEntry(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     mood: Mapped[str | None] = mapped_column(String(20))
     visibility: Mapped[str] = mapped_column(String(20), nullable=False, server_default="private")
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
-    updated_at: Mapped[datetime] = mapped_column(server_default="now()", onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         CheckConstraint("visibility IN ('private', 'shared', 'public')", name="ck_diary_visibility"),
@@ -42,7 +42,7 @@ class DiaryPhoto(Base):
     file_url: Mapped[str] = mapped_column(String(500), nullable=False)
     thumbnail_url: Mapped[str | None] = mapped_column(String(500))
     sort_order: Mapped[int] = mapped_column(nullable=False, server_default="0")
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     diary_entry: Mapped["DiaryEntry"] = relationship(back_populates="photos")
     uploader: Mapped["User"] = relationship()

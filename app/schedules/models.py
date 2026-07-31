@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -8,20 +8,27 @@ from app.core.database import Base
 
 class Schedule(Base):
     """약속/일정 하나. 캘린더·리스트·지도 화면의 중심 엔티티이며, 장소(SchedulePlace)와
-    일기(DiaryEntry)가 여기에 매달린다."""
+    일기(DiaryEntry)가 여기에 매달린다.
+
+    일정은 반드시 하나의 스페이스에 속한다. 조회·수정 권한은 created_by가 아니라
+    space_id에 대한 활성 SpaceMember 여부로 판단한다 (docs/SPACE_MODEL_SPEC.md 11절)."""
 
     __tablename__ = "schedules"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    space_id: Mapped[int] = mapped_column(
+        ForeignKey("spaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # 최초 작성자. 표시용이며 접근 제어에는 쓰지 않는다(삭제 권한 판단에만 사용).
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     start_at: Mapped[datetime] = mapped_column(nullable=False)
     end_at: Mapped[datetime] = mapped_column(nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="planned")
     visibility: Mapped[str] = mapped_column(String(20), nullable=False, server_default="private")
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
-    updated_at: Mapped[datetime] = mapped_column(server_default="now()", onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         CheckConstraint("status IN ('planned', 'completed', 'canceled')", name="ck_schedules_status"),
@@ -30,7 +37,8 @@ class Schedule(Base):
         CheckConstraint("end_at >= start_at", name="ck_schedules_time_range"),
     )
 
-    owner: Mapped["User"] = relationship(back_populates="schedules")
+    space: Mapped["Space"] = relationship(back_populates="schedules")
+    created_by_user: Mapped["User"] = relationship(back_populates="created_schedules", foreign_keys=[created_by])
     places: Mapped[list["SchedulePlace"]] = relationship(back_populates="schedule", order_by="SchedulePlace.sort_order")
     participants: Mapped[list["ScheduleParticipant"]] = relationship(back_populates="schedule")
     diary_entry: Mapped["DiaryEntry | None"] = relationship(back_populates="schedule", uselist=False)
@@ -38,8 +46,11 @@ class Schedule(Base):
 
 
 class ScheduleParticipant(Base):
-    """일정을 함께 보는 사용자(초대받은 참여자). owner_id로 소유자를 표시하는 Schedule과 별개로,
-    "함께 쓰는 흐름"에서 누가 어떤 권한(owner/editor/viewer)으로 참여 중인지 기록한다."""
+    """일정별 참석자 (MVP 미사용).
+
+    주의: 접근 제어에 사용하지 않는다. 스페이스 모델 도입으로 "누가 이 일정을 볼 수 있는가"는
+    SpaceMember가 판단하고, 이 테이블은 향후 "누가 실제로 참석하는가"를 다루기 위해 남겨둔다
+    (docs/SPACE_MODEL_SPEC.md 10절, P2 범위)."""
 
     __tablename__ = "schedule_participants"
 
@@ -47,7 +58,7 @@ class ScheduleParticipant(Base):
     schedule_id: Mapped[int] = mapped_column(ForeignKey("schedules.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, server_default="viewer")
-    invited_at: Mapped[datetime] = mapped_column(server_default="now()")
+    invited_at: Mapped[datetime] = mapped_column(server_default=func.now())
     accepted_at: Mapped[datetime | None] = mapped_column()
 
     __table_args__ = (
@@ -70,7 +81,7 @@ class ShareLink(Base):
     token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     permission: Mapped[str] = mapped_column(String(10), nullable=False, server_default="view")
     expires_at: Mapped[datetime | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     __table_args__ = (
         CheckConstraint("permission IN ('view', 'edit')", name="ck_share_links_permission"),

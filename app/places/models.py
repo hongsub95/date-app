@@ -1,7 +1,7 @@
 from datetime import datetime, time
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -20,7 +20,7 @@ class Place(Base):
     # 장소 출처: 사용자가 직접 입력했는지(manual) 외부 지도 API로 검색했는지 구분.
     provider: Mapped[str] = mapped_column(String(20), nullable=False, server_default="manual")
     provider_place_id: Mapped[str | None] = mapped_column(String(200))
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     __table_args__ = (
         CheckConstraint("provider IN ('manual', 'kakao', 'naver', 'google')", name="ck_places_provider"),
@@ -41,8 +41,8 @@ class SchedulePlace(Base):
     planned_time: Mapped[time | None] = mapped_column()
     memo: Mapped[str | None] = mapped_column(Text)
     visited: Mapped[bool] = mapped_column(nullable=False, server_default="false")
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
-    updated_at: Mapped[datetime] = mapped_column(server_default="now()", onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     schedule: Mapped["Schedule"] = relationship(back_populates="places")
     place: Mapped["Place"] = relationship()
