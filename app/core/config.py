@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str
 
+    # CORS: 브라우저에서 이 API를 호출할 수 있는 프론트엔드 출처 목록.
+    # .env에는 콤마로 구분해 적는다 (예: http://localhost:5173,http://localhost:3000).
+    cors_origins: str = "http://localhost:5173"
+
     # JWT
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
@@ -38,6 +42,15 @@ class Settings(BaseSettings):
         # 여기서 선언하지 않은 값은 무시해야 앱이 뜬다.
         extra="ignore",
     )
+
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """콤마로 구분된 cors_origins 문자열을 리스트로 바꾼다.
+
+        CORSMiddleware는 리스트를 요구하는데 .env는 문자열만 담을 수 있어 여기서 변환한다.
+        """
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 @lru_cache
