@@ -8,7 +8,7 @@ import ScheduleListPage from './features/schedules/ScheduleListPage'
 import ScheduleDetailPage from './features/schedules/ScheduleDetailPage'
 import ScheduleNewPage from './features/schedules/ScheduleNewPage'
 import SettingsPage from './features/settings/SettingsPage'
-import PrototypePage from './features/prototype/PrototypePage'
+import PrototypeLab from './features/prototype/PrototypeLab'
 
 function PrivateRoute({ children }) {
   const { user } = useAuth()
@@ -18,7 +18,7 @@ function PrivateRoute({ children }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/prototype" element={<PrototypePage />} />
+      <Route path="/prototype" element={<PrototypeLab />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route
