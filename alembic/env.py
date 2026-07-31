@@ -6,10 +6,8 @@ from alembic import context
 from app.core.config import get_settings
 from app.core.database import Base
 
-from app.users.models import User  # noqa: F401
-from app.places.models import Place, SchedulePlace  # noqa: F401
-from app.schedules.models import Schedule, ScheduleParticipant, ShareLink  # noqa: F401
-from app.diaries.models import DiaryEntry, DiaryPhoto  # noqa: F401
+# 모든 모델을 한 번에 등록한다. 새 모델은 app/models.py에 추가하면 여기도 자동 반영된다.
+from app import models as _models  # noqa: F401
 
 config = context.config
 settings = get_settings()
