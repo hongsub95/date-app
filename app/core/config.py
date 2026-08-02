@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     # Database
     database_url: str
 
+    # ── 로깅 ───────────────────────────────────────
+    # DEBUG / INFO / WARNING / ERROR 중 하나. 실서버는 INFO 이상을 권장한다.
+    log_level: str = "INFO"
+
+    # True면 SQLAlchemy가 실행하는 SQL 전문을 모두 로그로 남긴다.
+    # 쿼리를 눈으로 확인할 때만 켠다. 켜두면 로그가 매우 길어진다.
+    db_echo: bool = False
+
+    # DB 커넥션이 새로 만들어지거나 끊길 때 로그를 남길지.
+    # 풀에서 빌려 쓰는(checkout) 건 요청마다 일어나 시끄러우므로 DEBUG 레벨로만 남긴다.
+    db_log_connections: bool = True
+
     # CORS: 브라우저에서 이 API를 호출할 수 있는 프론트엔드 출처 목록.
     # 콤마로 구분해 적는다 (예: http://localhost:5173,https://내도메인.com).
     cors_origins: str = "http://localhost:5173"
