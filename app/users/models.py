@@ -33,6 +33,6 @@ class User(Base):
 
     # created_schedules: 내가 만든 일정. 접근 권한은 이걸로 판단하지 않고 SpaceMember로 판단한다.
     created_schedules: Mapped[list["Schedule"]] = relationship(
-        back_populates="created_by_user", foreign_keys="Schedule.created_by"
+        back_populates="created_by_user", foreign_keys="Schedule.created_by", passive_deletes=True
     )
-    space_memberships: Mapped[list["SpaceMember"]] = relationship(back_populates="user")
+    space_memberships: Mapped[list["SpaceMember"]] = relationship(back_populates="user", passive_deletes=True)

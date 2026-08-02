@@ -10,6 +10,8 @@
 
 from fastapi import APIRouter, Request, Response, status
 
+from app.audit import service as audit
+from app.audit.models import AuditAction
 from app.auth import service, session as session_store
 from app.auth.dependencies import CurrentUser, DbSession, RedisClient
 from app.auth.schemas import LoginRequest, RegisterRequest, UserResponse
@@ -80,6 +82,7 @@ def web_register(
         email=payload.email,
         nickname=payload.nickname,
         password=payload.password,
+        request=request,
     )
     session_id = session_store.create_session(
         client=redis_client,
@@ -109,7 +112,9 @@ def web_login(
     redis_client: RedisClient,
 ) -> UserResponse:
     """웹 로그인. 실패 시 이메일 존재 여부를 구분하지 않고 401을 반환한다."""
-    user = service.authenticate_user(db=db, email=payload.email, password=payload.password)
+    user = service.authenticate_user(
+        db=db, email=payload.email, password=payload.password, request=request
+    )
     session_id = session_store.create_session(
         client=redis_client,
         user_id=user.id,
@@ -129,7 +134,9 @@ def web_login(
         "쿠키를 복사해 두었더라도 다시 사용할 수 없다."
     ),
 )
-def web_logout(request: Request, response: Response, redis_client: RedisClient) -> None:
+def web_logout(
+    request: Request, response: Response, db: DbSession, redis_client: RedisClient
+) -> None:
     """웹 로그아웃.
 
     인증을 요구하지 않는다. 이미 만료된 세션으로 로그아웃을 눌렀을 때 401이 뜨면
@@ -137,7 +144,17 @@ def web_logout(request: Request, response: Response, redis_client: RedisClient) 
     """
     session_id = request.cookies.get(settings.session_cookie_name)
     if session_id:
+        # 세션을 지우기 전에 누구였는지 확인해야 이력에 행위자를 남길 수 있다.
+        user_id = session_store.get_session_user_id(redis_client, session_id)
         session_store.delete_session(redis_client, session_id)
+        if user_id is not None:
+            audit.record(
+                db,
+                AuditAction.LOGOUT,
+                user_id=user_id,
+                request=request,
+                detail={"client": "web"},
+            )
     _clear_session_cookie(response)
     return None
 
@@ -153,11 +170,21 @@ def web_logout(request: Request, response: Response, redis_client: RedisClient) 
 )
 def web_logout_all(
     current_user: CurrentUser,
+    request: Request,
     response: Response,
+    db: DbSession,
     redis_client: RedisClient,
 ) -> None:
     """현재 사용자의 모든 세션을 폐기한다."""
-    session_store.delete_all_user_sessions(redis_client, current_user.id)
+    removed = session_store.delete_all_user_sessions(redis_client, current_user.id)
+    audit.record(
+        db,
+        AuditAction.LOGOUT_ALL,
+        user_id=current_user.id,
+        actor_email=current_user.email,
+        request=request,
+        detail={"removed_sessions": removed},
+    )
     _clear_session_cookie(response)
     return None
 

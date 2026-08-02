@@ -11,15 +11,19 @@ Schedule을 import할 이유가 없어 "failed to locate a name ('Schedule')" �
 불러오면 되도록 만든다. 새 모델을 추가하면 여기에도 추가해야 한다.
 """
 
+from app.audit.models import AuditLog
 from app.diaries.models import DiaryEntry, DiaryPhoto
+from app.menus.models import Menu
 from app.places.models import Place, SchedulePlace
 from app.schedules.models import Schedule, ScheduleParticipant, ShareLink
 from app.spaces.models import Space, SpaceMember
 from app.users.models import User
 
 __all__ = [
+    "AuditLog",
     "DiaryEntry",
     "DiaryPhoto",
+    "Menu",
     "Place",
     "Schedule",
     "SchedulePlace",

@@ -59,6 +59,32 @@ uvicorn app.main:app --reload
 | Health check | `http://127.0.0.1:8000/api/v1/health` |
 | pgAdmin | `http://127.0.0.1:5050` |
 
+## 로그
+
+로그는 표준 출력(터미널)으로 나옵니다. 서버에 올렸을 때 Docker나 systemd가 수집하도록
+파일 경로를 직접 관리하지 않습니다.
+
+서버를 켜면 DB·Redis 연결 결과를 먼저 확인해 알려줍니다.
+
+```text
+2026-08-02 23:43:03 | INFO  | app.startup | 서버 시작 | env=local
+2026-08-02 23:43:03 | INFO  | app.db      | DB 커넥션 생성 | 사용중=1 대기=0 최대=10+20
+2026-08-02 23:43:03 | INFO  | app.startup | DB 연결 성공 | localhost:5432/nailgi | PostgreSQL 16.14
+2026-08-02 23:43:03 | INFO  | app.startup | Redis 연결 성공 | redis://localhost:6379/0
+```
+
+`.env.local`로 상세도를 조절합니다.
+
+| 설정 | 기본값 | 설명 |
+|---|---|---|
+| `LOG_LEVEL` | `INFO` | `DEBUG`로 바꾸면 커넥션 대여/반납까지 표시 |
+| `DB_ECHO` | `false` | `true`면 실행되는 SQL 전문을 모두 기록 |
+| `DB_LOG_CONNECTIONS` | `true` | DB 커넥션 생성/종료 로그 |
+
+커넥션 풀은 연결을 재사용하므로 **생성(connect)** 과 **대여(checkout)** 가 다릅니다.
+생성은 드물게 일어나 `INFO`로, 대여는 요청마다 일어나 로그가 폭주하므로 `DEBUG`로만
+남깁니다. 쿼리를 직접 확인하려면 `DB_ECHO=true`로 켜세요.
+
 ## 인증 구조
 
 플랫폼별로 인증 방식이 다릅니다. 로그인 이후 호출하는 API는 동일합니다.

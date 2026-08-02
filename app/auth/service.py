@@ -4,10 +4,12 @@
 "이메일이 중복인가", "개인 스페이스를 같이 만들어야 하는가" 같은 규칙은 전부 여기 모은다.
 """
 
-from fastapi import status
+from fastapi import Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.audit import service as audit
+from app.audit.models import AuditAction
 from app.auth import security
 from app.core.errors import AppError
 from app.spaces.models import (
@@ -82,7 +84,9 @@ def get_user_by_id(db: Session, user_id: int) -> User | None:
     return db.get(User, user_id)
 
 
-def register_user(db: Session, email: str, nickname: str, password: str) -> User:
+def register_user(
+    db: Session, email: str, nickname: str, password: str, request: Request | None = None
+) -> User:
     """새 사용자를 만들고 개인 스페이스까지 한 트랜잭션 안에서 생성한다.
 
     개인 스페이스를 같은 트랜잭션에 묶는 이유: 사용자는 있는데 스페이스가 없는 상태가
@@ -93,6 +97,7 @@ def register_user(db: Session, email: str, nickname: str, password: str) -> User
     :param email: 가입 이메일 (스키마에서 형식 검증 완료)
     :param nickname: 표시 이름
     :param password: 평문 비밀번호 (여기서 해싱한다)
+    :param request: 감사 로그에 접속 IP·User-Agent를 남기기 위한 요청 객체
     :raises EmailAlreadyExistsError: 이메일이 이미 존재할 때
     :raises NicknameAlreadyExistsError: 닉네임이 이미 존재할 때
     :return: 생성된 User (개인 스페이스가 default_space_id로 설정된 상태)
@@ -135,14 +140,32 @@ def register_user(db: Session, email: str, nickname: str, password: str) -> User
     # 사용자가 따로 지정하기 전까지는 개인 스페이스가 앱 실행 시 열리는 기본 스페이스다.
     user.default_space_id = personal_space.id
 
+    # commit=False로 회원가입과 같은 트랜잭션에 합류시킨다. 가입이 롤백되면
+    # "가입했다"는 기록도 함께 사라져야 사실과 어긋나지 않는다.
+    audit.record(
+        db,
+        AuditAction.REGISTER,
+        user_id=user.id,
+        actor_email=user.email,
+        request=request,
+        detail={"nickname": user.nickname},
+        commit=False,
+    )
+
     db.commit()
     db.refresh(user)
     return user
 
 
-def authenticate_user(db: Session, email: str, password: str) -> User:
+def authenticate_user(
+    db: Session, email: str, password: str, request: Request | None = None
+) -> User:
     """이메일과 비밀번호로 사용자를 인증한다.
 
+    성공과 실패를 모두 감사 로그에 남긴다. 실패 기록은 무차별 대입 시도를 발견하는
+    유일한 단서이므로 반드시 남겨야 한다.
+
+    :param request: 감사 로그에 접속 IP·User-Agent를 남기기 위한 요청 객체
     :raises InvalidCredentialsError: 이메일이 없거나 비밀번호가 틀린 경우
     :return: 인증된 User
     """
@@ -151,11 +174,34 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
         # 존재하지 않는 이메일이어도 비밀번호를 실제로 검증한 것과 비슷한 시간을 쓰게 한다.
         # 응답 속도 차이로 "이 이메일은 가입되어 있다"를 알아내는 타이밍 공격을 막기 위함이다.
         security.verify_password(password, security.DUMMY_PASSWORD_HASH)
+        # 사용자를 특정할 수 없으므로 user_id는 비우고 시도한 이메일만 남긴다.
+        audit.record(
+            db,
+            AuditAction.LOGIN_FAILED,
+            actor_email=email,
+            request=request,
+            detail={"reason": "USER_NOT_FOUND"},
+        )
         raise InvalidCredentialsError()
 
     if not security.verify_password(password, user.password_hash):
+        audit.record(
+            db,
+            AuditAction.LOGIN_FAILED,
+            user_id=user.id,
+            actor_email=email,
+            request=request,
+            detail={"reason": "WRONG_PASSWORD"},
+        )
         raise InvalidCredentialsError()
 
+    audit.record(
+        db,
+        AuditAction.LOGIN_SUCCESS,
+        user_id=user.id,
+        actor_email=user.email,
+        request=request,
+    )
     return user
 
 

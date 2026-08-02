@@ -78,8 +78,8 @@ class Space(Base):
         Index("ix_nl_spaces_owner_id", "owner_id"),
     )
 
-    members: Mapped[list["SpaceMember"]] = relationship(back_populates="space")
-    schedules: Mapped[list["Schedule"]] = relationship(back_populates="space")
+    members: Mapped[list["SpaceMember"]] = relationship(back_populates="space", passive_deletes=True)
+    schedules: Mapped[list["Schedule"]] = relationship(back_populates="space", passive_deletes=True)
 
 
 class SpaceMember(Base):

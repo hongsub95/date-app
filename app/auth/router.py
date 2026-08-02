@@ -4,8 +4,10 @@
 요청을 풀어 서비스에 넘기고 결과를 스키마로 감싸는 일만 한다.
 """
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 
+from app.audit import service as audit
+from app.audit.models import AuditAction
 from app.auth import service
 from app.auth.dependencies import CurrentUser, DbSession
 from app.auth.schemas import (
@@ -30,13 +32,14 @@ router = APIRouter(prefix="/auth", tags=["auth"])
         "가입 직후 바로 로그인 상태가 되도록 토큰을 함께 돌려준다."
     ),
 )
-def register(payload: RegisterRequest, db: DbSession) -> RegisterResponse:
+def register(payload: RegisterRequest, request: Request, db: DbSession) -> RegisterResponse:
     """회원가입. 이메일/닉네임 중복 시 409를 반환한다."""
     user = service.register_user(
         db=db,
         email=payload.email,
         nickname=payload.nickname,
         password=payload.password,
+        request=request,
     )
     access_token, refresh_token = service.issue_tokens(user.id)
     return RegisterResponse(
@@ -51,9 +54,11 @@ def register(payload: RegisterRequest, db: DbSession) -> RegisterResponse:
     summary="로그인",
     description="이메일과 비밀번호로 access token과 refresh token을 발급받는다.",
 )
-def login(payload: LoginRequest, db: DbSession) -> TokenResponse:
+def login(payload: LoginRequest, request: Request, db: DbSession) -> TokenResponse:
     """로그인. 이메일이 없거나 비밀번호가 틀리면 동일하게 401을 반환한다."""
-    user = service.authenticate_user(db=db, email=payload.email, password=payload.password)
+    user = service.authenticate_user(
+        db=db, email=payload.email, password=payload.password, request=request
+    )
     access_token, refresh_token = service.issue_tokens(user.id)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
@@ -83,8 +88,16 @@ def refresh(payload: RefreshRequest, db: DbSession) -> TokenResponse:
         "지우는 것으로 완료된다. 지우기 전의 토큰은 만료 시각까지 유효하다."
     ),
 )
-def logout(current_user: CurrentUser) -> None:
-    """로그아웃. 토큰 폐기는 클라이언트 책임이며, 여기서는 인증 여부만 확인한다."""
+def logout(current_user: CurrentUser, request: Request, db: DbSession) -> None:
+    """로그아웃. 토큰 폐기는 클라이언트 책임이며, 여기서는 인증 확인과 이력 기록만 한다."""
+    audit.record(
+        db,
+        AuditAction.LOGOUT,
+        user_id=current_user.id,
+        actor_email=current_user.email,
+        request=request,
+        detail={"client": "app"},
+    )
     return None
 
 

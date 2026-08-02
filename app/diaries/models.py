@@ -28,7 +28,9 @@ class DiaryEntry(Base):
 
     schedule: Mapped["Schedule"] = relationship(back_populates="diary_entry")
     author: Mapped["User"] = relationship()
-    photos: Mapped[list["DiaryPhoto"]] = relationship(back_populates="diary_entry", order_by="DiaryPhoto.sort_order")
+    photos: Mapped[list["DiaryPhoto"]] = relationship(
+        back_populates="diary_entry", order_by="DiaryPhoto.sort_order", passive_deletes=True
+    )
 
 
 class DiaryPhoto(Base):

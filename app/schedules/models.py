@@ -41,10 +41,12 @@ class Schedule(Base):
 
     space: Mapped["Space"] = relationship(back_populates="schedules")
     created_by_user: Mapped["User"] = relationship(back_populates="created_schedules", foreign_keys=[created_by])
-    places: Mapped[list["SchedulePlace"]] = relationship(back_populates="schedule", order_by="SchedulePlace.sort_order")
-    participants: Mapped[list["ScheduleParticipant"]] = relationship(back_populates="schedule")
-    diary_entry: Mapped["DiaryEntry | None"] = relationship(back_populates="schedule", uselist=False)
-    share_links: Mapped[list["ShareLink"]] = relationship(back_populates="schedule")
+    places: Mapped[list["SchedulePlace"]] = relationship(
+        back_populates="schedule", order_by="SchedulePlace.sort_order", passive_deletes=True
+    )
+    participants: Mapped[list["ScheduleParticipant"]] = relationship(back_populates="schedule", passive_deletes=True)
+    diary_entry: Mapped["DiaryEntry | None"] = relationship(back_populates="schedule", uselist=False, passive_deletes=True)
+    share_links: Mapped[list["ShareLink"]] = relationship(back_populates="schedule", passive_deletes=True)
 
 
 class ScheduleParticipant(Base):
