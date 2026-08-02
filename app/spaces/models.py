@@ -47,7 +47,7 @@ class Space(Base):
     """일정 기록이 쌓이는 공간. personal은 회원가입 시 1개 자동 생성되며 초대할 수 없고,
     shared는 사용자가 직접 만들어 참여 번호로 다른 사람을 받는다."""
 
-    __tablename__ = "spaces"
+    __tablename__ = "nl_spaces"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     # 외부(URL, 클라이언트)에 노출하는 식별자. 정수 id를 그대로 쓰면 남의 스페이스 번호를
@@ -61,7 +61,7 @@ class Space(Base):
     # 사용자가 입력해서 들어오는 참여 번호. 개인 스페이스는 초대 자체가 불가능하므로 NULL이다.
     # 유출 시 owner가 재발급할 수 있어야 하므로 불변값으로 다루지 않는다.
     join_code: Mapped[str | None] = mapped_column(String(16), unique=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("nl_users.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
     # 소프트 삭제(보관). 값이 있으면 목록에서 감추되 기록은 남긴다 (명세 7.4).
@@ -84,11 +84,11 @@ class SpaceMember(Base):
     """스페이스에 속한 사용자와 그 권한. 모든 보호 API는 이 테이블에 status='active'인
     행이 있는지로 접근 여부를 판단한다 (명세 11절)."""
 
-    __tablename__ = "space_members"
+    __tablename__ = "nl_space_members"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    space_id: Mapped[int] = mapped_column(ForeignKey("spaces.id", ondelete="CASCADE"), nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    space_id: Mapped[int] = mapped_column(ForeignKey("nl_spaces.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("nl_users.id", ondelete="CASCADE"), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, server_default=SPACE_ROLE_MEMBER)
     # 나가거나 제거돼도 행을 지우지 않고 상태만 바꾼다. 과거 기록의 작성자 표시를 위해서다.
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=SPACE_MEMBER_STATUS_ACTIVE)

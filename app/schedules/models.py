@@ -13,14 +13,14 @@ class Schedule(Base):
     일정은 반드시 하나의 스페이스에 속한다. 조회·수정 권한은 created_by가 아니라
     space_id에 대한 활성 SpaceMember 여부로 판단한다 (docs/SPACE_MODEL_SPEC.md 11절)."""
 
-    __tablename__ = "schedules"
+    __tablename__ = "nl_schedules"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     space_id: Mapped[int] = mapped_column(
-        ForeignKey("spaces.id", ondelete="CASCADE"), nullable=False, index=True
+        ForeignKey("nl_spaces.id", ondelete="CASCADE"), nullable=False, index=True
     )
     # 최초 작성자. 표시용이며 접근 제어에는 쓰지 않는다(삭제 권한 판단에만 사용).
-    created_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_by: Mapped[int] = mapped_column(ForeignKey("nl_users.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     start_at: Mapped[datetime] = mapped_column(nullable=False)
@@ -52,11 +52,11 @@ class ScheduleParticipant(Base):
     SpaceMember가 판단하고, 이 테이블은 향후 "누가 실제로 참석하는가"를 다루기 위해 남겨둔다
     (docs/SPACE_MODEL_SPEC.md 10절, P2 범위)."""
 
-    __tablename__ = "schedule_participants"
+    __tablename__ = "nl_schedule_participants"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    schedule_id: Mapped[int] = mapped_column(ForeignKey("schedules.id", ondelete="CASCADE"), nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    schedule_id: Mapped[int] = mapped_column(ForeignKey("nl_schedules.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("nl_users.id", ondelete="CASCADE"), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, server_default="viewer")
     invited_at: Mapped[datetime] = mapped_column(server_default=func.now())
     accepted_at: Mapped[datetime | None] = mapped_column()
@@ -74,10 +74,10 @@ class ShareLink(Base):
     """일정을 초대 없이 링크만으로 공유하기 위한 토큰. permission으로 열람/편집 권한을 구분하고,
     expires_at으로 만료 시점을 둘 수 있다."""
 
-    __tablename__ = "share_links"
+    __tablename__ = "nl_share_links"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    schedule_id: Mapped[int] = mapped_column(ForeignKey("schedules.id", ondelete="CASCADE"), nullable=False)
+    schedule_id: Mapped[int] = mapped_column(ForeignKey("nl_schedules.id", ondelete="CASCADE"), nullable=False)
     token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     permission: Mapped[str] = mapped_column(String(10), nullable=False, server_default="view")
     expires_at: Mapped[datetime | None] = mapped_column()

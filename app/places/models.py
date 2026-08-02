@@ -10,7 +10,7 @@ from app.core.database import Base
 class Place(Base):
     """지도상의 장소 하나. 여러 일정(Schedule)이 같은 Place를 재사용할 수 있다."""
 
-    __tablename__ = "places"
+    __tablename__ = "nl_places"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -31,11 +31,11 @@ class SchedulePlace(Base):
     """일정(Schedule)에 담긴 장소 하나. Schedule과 Place의 다대다 관계를 풀어주는 연결 테이블이며,
     방문 순서(sort_order)와 방문 여부(visited) 같은 일정별 상태를 함께 갖는다."""
 
-    __tablename__ = "schedule_places"
+    __tablename__ = "nl_schedule_places"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    schedule_id: Mapped[int] = mapped_column(ForeignKey("schedules.id", ondelete="CASCADE"), nullable=False)
-    place_id: Mapped[int] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"), nullable=False)
+    schedule_id: Mapped[int] = mapped_column(ForeignKey("nl_schedules.id", ondelete="CASCADE"), nullable=False)
+    place_id: Mapped[int] = mapped_column(ForeignKey("nl_places.id", ondelete="CASCADE"), nullable=False)
     # 같은 일정 안에서 장소를 방문할 순서. 값이 작을수록 먼저 방문.
     sort_order: Mapped[int] = mapped_column(nullable=False, server_default="0")
     planned_time: Mapped[time | None] = mapped_column()

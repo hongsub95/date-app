@@ -9,11 +9,11 @@ from app.core.database import Base
 class DiaryEntry(Base):
     """일정 하나에 대한 일기. schedule_id가 UNIQUE라서 일정당 일기는 항상 1개다."""
 
-    __tablename__ = "diary_entries"
+    __tablename__ = "nl_diary_entries"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    schedule_id: Mapped[int] = mapped_column(ForeignKey("schedules.id", ondelete="CASCADE"), nullable=False)
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    schedule_id: Mapped[int] = mapped_column(ForeignKey("nl_schedules.id", ondelete="CASCADE"), nullable=False)
+    author_id: Mapped[int] = mapped_column(ForeignKey("nl_users.id", ondelete="CASCADE"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     mood: Mapped[str | None] = mapped_column(String(20))
     visibility: Mapped[str] = mapped_column(String(20), nullable=False, server_default="private")
@@ -34,11 +34,11 @@ class DiaryEntry(Base):
 class DiaryPhoto(Base):
     """일기에 첨부된 사진 한 장. file_url/thumbnail_url은 S3에 업로드된 후의 접근 경로를 저장한다."""
 
-    __tablename__ = "diary_photos"
+    __tablename__ = "nl_diary_photos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    diary_entry_id: Mapped[int] = mapped_column(ForeignKey("diary_entries.id", ondelete="CASCADE"), nullable=False)
-    uploader_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    diary_entry_id: Mapped[int] = mapped_column(ForeignKey("nl_diary_entries.id", ondelete="CASCADE"), nullable=False)
+    uploader_id: Mapped[int] = mapped_column(ForeignKey("nl_users.id", ondelete="CASCADE"), nullable=False)
     file_url: Mapped[str] = mapped_column(String(500), nullable=False)
     thumbnail_url: Mapped[str | None] = mapped_column(String(500))
     sort_order: Mapped[int] = mapped_column(nullable=False, server_default="0")

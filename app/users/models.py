@@ -9,7 +9,7 @@ from app.core.database import Base
 class User(Base):
     """회원 계정 테이블. 이메일/비밀번호 로그인과 닉네임 표시를 위한 기본 프로필을 담는다."""
 
-    __tablename__ = "users"
+    __tablename__ = "nl_users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -20,7 +20,7 @@ class User(Base):
     # 직접 바꿀 수 있다. 현재 기본값으로 지정된 스페이스는 삭제할 수 없다 (명세 0절).
     # spaces.owner_id -> users.id 순환 참조가 생기므로 FK 제약은 마이그레이션에서 use_alter로 처리한다.
     default_space_id: Mapped[int | None] = mapped_column(
-        ForeignKey("spaces.id", ondelete="SET NULL", use_alter=True, name="fk_users_default_space")
+        ForeignKey("nl_spaces.id", ondelete="SET NULL", use_alter=True, name="fk_users_default_space")
     )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
