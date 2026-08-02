@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -16,9 +16,7 @@ class Schedule(Base):
     __tablename__ = "nl_schedules"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    space_id: Mapped[int] = mapped_column(
-        ForeignKey("nl_spaces.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    space_id: Mapped[int] = mapped_column(ForeignKey("nl_spaces.id", ondelete="CASCADE"), nullable=False)
     # 최초 작성자. 표시용이며 접근 제어에는 쓰지 않는다(삭제 권한 판단에만 사용).
     created_by: Mapped[int] = mapped_column(ForeignKey("nl_users.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -26,15 +24,19 @@ class Schedule(Base):
     start_at: Mapped[datetime] = mapped_column(nullable=False)
     end_at: Mapped[datetime] = mapped_column(nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="planned")
-    visibility: Mapped[str] = mapped_column(String(20), nullable=False, server_default="private")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         CheckConstraint("status IN ('planned', 'completed', 'canceled')", name="ck_schedules_status"),
-        CheckConstraint("visibility IN ('private', 'shared', 'public')", name="ck_schedules_visibility"),
         # 종료 시각이 시작 시각보다 앞설 수 없다는 불변식을 DB 레벨에서도 강제.
         CheckConstraint("end_at >= start_at", name="ck_schedules_time_range"),
+        # 캘린더와 일정 목록의 주 질의는 "이 스페이스의 이 기간 일정"이다.
+        # 두 컬럼을 묶은 복합 인덱스라야 기간 조건까지 인덱스로 걸러진다.
+        # space_id가 맨 앞이므로 space_id 단독 조회도 이 인덱스가 함께 처리한다.
+        Index("ix_nl_schedules_space_start", "space_id", "start_at"),
+        # 사용자 탈퇴 시 작성한 일정을 찾거나 "내가 만든 일정"을 조회할 때 쓴다.
+        Index("ix_nl_schedules_created_by", "created_by"),
     )
 
     space: Mapped["Space"] = relationship(back_populates="schedules")
@@ -64,6 +66,9 @@ class ScheduleParticipant(Base):
     __table_args__ = (
         CheckConstraint("role IN ('owner', 'editor', 'viewer')", name="ck_participants_role"),
         UniqueConstraint("schedule_id", "user_id", name="uq_participants_schedule_user"),
+        # (schedule_id, user_id) 고유 제약이 schedule_id로 시작하므로 그 방향 조회는 커버되지만,
+        # user_id만으로 찾는 경우(사용자 탈퇴 처리 등)는 별도 인덱스가 필요하다.
+        Index("ix_nl_schedule_participants_user_id", "user_id"),
     )
 
     schedule: Mapped["Schedule"] = relationship(back_populates="participants")
@@ -85,6 +90,8 @@ class ShareLink(Base):
 
     __table_args__ = (
         CheckConstraint("permission IN ('view', 'edit')", name="ck_share_links_permission"),
+        # 일정 삭제 시 딸린 공유 링크를 찾아 정리할 때 쓴다.
+        Index("ix_nl_share_links_schedule_id", "schedule_id"),
     )
 
     schedule: Mapped["Schedule"] = relationship(back_populates="share_links")

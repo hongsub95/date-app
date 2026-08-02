@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, func
+from sqlalchemy import ForeignKey, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -24,6 +24,12 @@ class User(Base):
     )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        # 앱을 열 때마다 기본 스페이스를 찾고, 스페이스 삭제 시 이를 기본값으로
+        # 지정한 사용자가 있는지 확인해야 하므로 인덱스를 둔다.
+        Index("ix_nl_users_default_space_id", "default_space_id"),
+    )
 
     # created_schedules: 내가 만든 일정. 접근 권한은 이걸로 판단하지 않고 SpaceMember로 판단한다.
     created_schedules: Mapped[list["Schedule"]] = relationship(

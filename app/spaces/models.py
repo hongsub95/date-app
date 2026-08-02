@@ -9,7 +9,7 @@ import secrets
 import uuid as uuid_module
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -74,6 +74,8 @@ class Space(Base):
             f"(type = '{SPACE_TYPE_PERSONAL}' AND join_code IS NULL) OR type = '{SPACE_TYPE_SHARED}'",
             name="ck_spaces_personal_has_no_join_code",
         ),
+        # 사용자 탈퇴 시 그가 소유한 스페이스를 찾을 때 쓴다.
+        Index("ix_nl_spaces_owner_id", "owner_id"),
     )
 
     members: Mapped[list["SpaceMember"]] = relationship(back_populates="space")
@@ -101,6 +103,10 @@ class SpaceMember(Base):
         # 같은 사람이 같은 스페이스에 두 번 들어가지 못하게 막는다. 초대 동시 수락 시
         # 중복 멤버십이 생기는 것을 DB 레벨에서 차단한다 (명세 12절 엣지 케이스).
         UniqueConstraint("space_id", "user_id", name="uq_space_members_space_user"),
+        # "내가 속한 스페이스 목록"은 앱을 열 때마다 호출되는 핵심 질의다.
+        # 위 고유 제약은 space_id로 시작해서 user_id 단독 조회를 커버하지 못하므로 따로 만든다.
+        # status를 함께 묶어 활성 멤버십만 거르는 조건까지 인덱스로 처리한다.
+        Index("ix_nl_space_members_user_status", "user_id", "status"),
     )
 
     space: Mapped["Space"] = relationship(back_populates="members")
