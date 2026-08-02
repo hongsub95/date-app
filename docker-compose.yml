@@ -17,6 +17,23 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: nailgi-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    # 웹 세션이 저장되므로 컨테이너를 껐다 켜도 로그인이 유지되도록 디스크에 남긴다.
+    # (appendonly 없이는 재시작 시 모든 사용자가 로그아웃된다)
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: nailgi-pgadmin
@@ -41,15 +58,19 @@ services:
     env_file:
       - .env
     environment:
-      # Docker 내부에서는 db 서비스 호스트명으로 오버라이드
+      # Docker 내부에서는 localhost가 아니라 서비스 이름으로 접속해야 한다
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT:-5432}/${DB_NAME}
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./app:/app/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:
   pgadmin_data:
+  redis_data:

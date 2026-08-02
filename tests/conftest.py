@@ -8,49 +8,63 @@ SQLite를 쓰지 않는 이유: 스키마가 PostgreSQL 전용 기능(UUID 타�
 방언 차이로 인한 버그도 잡을 수 있다.
 """
 
-from collections.abc import Generator
+import os
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session, sessionmaker
+# app.core.config 를 import 하기 전에 APP_ENV를 설정해야 한다.
+# config 모듈이 import 시점에 APP_ENV를 읽어 어느 .env 파일을 쓸지 정하기 때문에,
+# 나중에 바꾸면 이미 .env.local 을 읽은 뒤라 소용이 없다.
+os.environ.setdefault("APP_ENV", "test")
 
-from app import models as _models  # noqa: F401  (모든 모델을 메타데이터에 등록)
-from app.core.config import get_settings
-from app.core.database import Base, get_db
-from app.main import app
+from collections.abc import Generator  # noqa: E402
 
-TEST_DB_NAME = "nailgi_test"
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
+
+import redis as redis_lib  # noqa: E402
+
+from app import models as _models  # noqa: F401,E402  (모든 모델을 메타데이터에 등록)
+from app.core.config import get_settings  # noqa: E402
+from app.core.database import Base, get_db  # noqa: E402
+from app.core.redis_client import get_redis  # noqa: E402
+from app.main import app  # noqa: E402
 
 
-def _build_test_database_url() -> str:
-    """개발용 DATABASE_URL에서 DB 이름만 테스트용으로 바꾼 접속 문자열을 만든다.
+def _test_database_url() -> str:
+    """테스트가 사용할 DB 접속 문자열.
 
-    호스트/계정/비밀번호는 .env 값을 그대로 재사용하므로 설정을 이중으로 관리하지 않아도 된다.
+    .env.test 의 DATABASE_URL을 그대로 쓴다. 개발용 DB를 실수로 지우는 일이 없도록
+    이름이 개발 DB와 다른지 여기서 한 번 더 확인한다.
     """
-    base_url = get_settings().database_url
-    prefix, _, _ = base_url.rpartition("/")
-    return f"{prefix}/{TEST_DB_NAME}"
+    url = get_settings().database_url
+    if not url.rsplit("/", 1)[-1].endswith("_test"):
+        raise RuntimeError(
+            f"테스트 DB 이름이 '_test'로 끝나지 않습니다: {url}\n"
+            ".env.test 의 DATABASE_URL을 확인하세요. 개발용 DB를 지우는 사고를 막기 위한 검사입니다."
+        )
+    return url
 
 
 @pytest.fixture(scope="session")
 def test_engine():
     """테스트 세션 전체에서 쓸 엔진. 테스트 DB와 테이블을 만들어 둔다."""
-    settings = get_settings()
+    test_url = _test_database_url()
+    test_db_name = test_url.rsplit("/", 1)[-1]
 
     # CREATE DATABASE는 트랜잭션 안에서 실행할 수 없어 AUTOCOMMIT이 필요하다.
     # 또한 자기 자신에 접속한 채로는 만들 수 없으므로 기본 postgres DB에 붙어서 만든다.
-    admin_url = settings.database_url.rpartition("/")[0] + "/postgres"
+    admin_url = test_url.rpartition("/")[0] + "/postgres"
     admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
     with admin_engine.connect() as conn:
         exists = conn.execute(
-            text("SELECT 1 FROM pg_database WHERE datname = :name"), {"name": TEST_DB_NAME}
+            text("SELECT 1 FROM pg_database WHERE datname = :name"), {"name": test_db_name}
         ).scalar()
         if not exists:
-            conn.execute(text(f'CREATE DATABASE "{TEST_DB_NAME}"'))
+            conn.execute(text(f'CREATE DATABASE "{test_db_name}"'))
     admin_engine.dispose()
 
-    engine = create_engine(_build_test_database_url())
+    engine = create_engine(test_url)
     # 테스트는 alembic을 거치지 않고 모델 메타데이터에서 바로 만든다. 마이그레이션 순서와
     # 무관하게 "현재 모델이 의도한 스키마"를 검증하기 위해서다.
     Base.metadata.drop_all(bind=engine)
@@ -81,17 +95,43 @@ def db_session(test_engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client(db_session: Session) -> Generator[TestClient, None, None]:
-    """테스트 DB를 바라보는 API 클라이언트.
+def redis_client() -> Generator[redis_lib.Redis, None, None]:
+    """테스트용 Redis 클라이언트.
 
-    앱이 쓰는 get_db 의존성을 테스트 세션으로 갈아끼워, 라우터가 개발용 DB 대신
-    테스트 DB를 쓰게 만든다.
+    .env.test가 개발용(0번)과 다른 1번 DB를 가리키므로, 테스트 중 개발하며 로그인해둔
+    세션이 지워지지 않는다. 각 테스트 전후로 비워 이전 테스트의 세션이 남지 않게 한다.
+    """
+    client = redis_lib.Redis.from_url(get_settings().redis_url, decode_responses=True)
+
+    # 개발용 DB를 실수로 비우는 사고를 막는 안전장치.
+    if client.connection_pool.connection_kwargs.get("db") == 0:
+        raise RuntimeError(
+            "테스트가 0번 Redis DB를 가리키고 있습니다. .env.test의 REDIS_URL을 확인하세요.\n"
+            "개발 중인 로그인 세션이 모두 지워지는 것을 막기 위한 검사입니다."
+        )
+
+    client.flushdb()
+    yield client
+    client.flushdb()
+    client.close()
+
+
+@pytest.fixture
+def client(db_session: Session, redis_client: redis_lib.Redis) -> Generator[TestClient, None, None]:
+    """테스트 DB와 테스트 Redis를 바라보는 API 클라이언트.
+
+    앱이 쓰는 get_db / get_redis 의존성을 테스트용으로 갈아끼워, 라우터가 개발용
+    저장소 대신 테스트 저장소를 쓰게 만든다.
     """
 
     def override_get_db() -> Generator[Session, None, None]:
         yield db_session
 
+    def override_get_redis() -> redis_lib.Redis:
+        return redis_client
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis] = override_get_redis
 
     with TestClient(app) as test_client:
         yield test_client

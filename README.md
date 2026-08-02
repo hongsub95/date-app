@@ -29,8 +29,9 @@ docs/       Product and development documents
 PostgreSQL이 먼저 떠 있어야 합니다. 아래 과정을 한 번에 실행하려면 `.\dev.ps1`을 쓰세요.
 
 ```powershell
-# 1) DB 컨테이너 실행 (PostgreSQL + pgAdmin)
-docker compose up -d db pgadmin
+# 1) 컨테이너 실행 (PostgreSQL + Redis + pgAdmin)
+#    Redis는 웹 세션 저장소입니다. 없으면 웹 로그인이 동작하지 않습니다.
+docker compose up -d db redis pgadmin
 
 # 2) 가상환경 준비
 py -m venv .venv
@@ -40,6 +41,7 @@ pip install -r requirements.txt
 
 # 3) .env 준비 (.env.example을 복사한 뒤 값을 채웁니다)
 copy .env.example .env
+# 로컬 개발용 설정은 .env.local 에 별도로 둡니다 (아래 "환경 설정" 참고)
 
 # 4) DB 스키마 반영
 alembic upgrade head
@@ -57,10 +59,59 @@ uvicorn app.main:app --reload
 | Health check | `http://127.0.0.1:8000/api/v1/health` |
 | pgAdmin | `http://127.0.0.1:5050` |
 
+## 인증 구조
+
+플랫폼별로 인증 방식이 다릅니다. 로그인 이후 호출하는 API는 동일합니다.
+
+| | 웹 | 모바일 앱 |
+|---|---|---|
+| 방식 | Redis 세션 + httpOnly 쿠키 | JWT Bearer 토큰 |
+| 엔드포인트 | `/api/v1/auth/web/*` | `/api/v1/auth/*` |
+| 강제 로그아웃 | 가능 (세션 삭제) | 불가 (만료까지) |
+
+웹에 세션을 쓰는 이유는 서버가 로그인 상태를 보관해야 강제 로그아웃과 접속 기기 관리가
+가능하기 때문입니다. `app/auth/dependencies.py`의 `get_current_user`가 쿠키를 먼저 보고
+없으면 `Authorization` 헤더를 확인하므로, 각 라우터는 어느 쪽으로 로그인했는지 신경 쓸
+필요가 없습니다.
+
+**로컬에서 웹 프론트를 붙일 때는 API를 `127.0.0.1`이 아니라 `localhost`로 호출해야
+쿠키가 전송됩니다.** 자세한 내용은 [API 명세 3.0절](./docs/API_SPEC.md)을 참고하세요.
+
+## 환경 설정
+
+환경변수는 공통 파일과 환경별 파일로 나뉩니다. `.env`를 먼저 읽고 그 위에
+`.env.{APP_ENV}`가 덮어씁니다.
+
+| 파일 | 용도 | 커밋 |
+|---|---|---|
+| `.env` | 공통 기본값 + Docker Compose 전용 변수(`DB_*`, `PGADMIN_*`, `REDIS_PORT`) | ❌ |
+| `.env.local` | 로컬 개발 (기본값) | ❌ |
+| `.env.test` | 테스트 (`nailgi_test` DB 사용) | ❌ |
+| `.env.production` | 실서버 | ❌ |
+| `.env.example`, `.env.production.example` | 템플릿 | ✅ |
+
+어떤 환경으로 뜰지는 OS 환경변수 `APP_ENV`로 정합니다. 지정하지 않으면 `local`입니다.
+
+```powershell
+uvicorn app.main:app --reload            # .env + .env.local
+$env:APP_ENV="production"; uvicorn ...   # .env + .env.production
+```
+
+`docker-compose.yml`은 `.env`만 읽고 `.env.local`은 읽지 않으므로, DB 접속 정보는
+반드시 `.env`에 있어야 컨테이너가 뜹니다.
+
+**사진 저장소 전환**
+
+로컬은 서버 디스크(`uploads/`), 실서버는 AWS S3에 저장합니다. `STORAGE_BACKEND`
+값(`local` / `s3`) 하나로만 갈리고 API 응답 형태는 동일합니다. DB에는 전체 URL이 아니라
+저장 키(`diaries/7/abc.jpg`)만 넣고 응답을 만들 때 `MEDIA_BASE_URL`을 앞에 붙이므로,
+저장소를 바꿔도 기존 데이터를 고칠 필요가 없습니다.
+
 ## 백엔드 테스트
 
-테스트는 개발용 DB(`nailgi`)가 아니라 별도의 `nailgi_test` DB를 자동으로 만들어 사용합니다.
-DB 컨테이너가 실행 중이어야 합니다.
+테스트는 개발용 저장소를 건드리지 않습니다. DB는 별도의 `nailgi_test`를 자동 생성해
+쓰고, Redis도 개발용(0번)과 분리된 1번 DB를 씁니다. 컨테이너(`db`, `redis`)가 실행
+중이어야 합니다.
 
 ```powershell
 pytest -q
