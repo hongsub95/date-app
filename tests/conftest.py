@@ -67,7 +67,12 @@ def test_engine():
     engine = create_engine(test_url)
     # 테스트는 alembic을 거치지 않고 모델 메타데이터에서 바로 만든다. 마이그레이션 순서와
     # 무관하게 "현재 모델이 의도한 스키마"를 검증하기 위해서다.
-    Base.metadata.drop_all(bind=engine)
+    #
+    # drop_all이 아니라 스키마를 통째로 지우는 이유: drop_all은 현재 모델이 아는 테이블만
+    # 지우므로, 테이블 이름을 바꾸면 옛 이름의 테이블이 남아 제약조건 이름이 충돌한다.
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
     Base.metadata.create_all(bind=engine)
 
     yield engine
