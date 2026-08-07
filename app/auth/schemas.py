@@ -6,12 +6,18 @@
 """
 
 from datetime import datetime
+from string import ascii_letters, digits, punctuation
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.auth.security import MAX_PASSWORD_BYTES
 
-MIN_PASSWORD_LENGTH = 8
+MIN_PASSWORD_LENGTH = 9
+
+# 비밀번호에서 '특수문자'로 인정하는 문자 집합. string.punctuation과 같은 ASCII 구두점
+# 32자이며 공백은 포함하지 않는다. API_SPEC 3.2절에 이 목록을 그대로 명시해 두었으니
+# 여기를 바꾸면 명세와 프론트엔드 검증도 함께 고쳐야 한다.
+SPECIAL_CHARACTERS = punctuation
 
 
 class RegisterRequest(BaseModel):
@@ -19,19 +25,40 @@ class RegisterRequest(BaseModel):
 
     email: EmailStr
     nickname: str = Field(min_length=2, max_length=50)
-    password: str = Field(min_length=MIN_PASSWORD_LENGTH)
+    # min_length를 Field에 두면 pydantic이 "String should have at least 9 characters"
+    # 라는 영어 문구를 그대로 응답에 실어 보낸다. API_SPEC 2.5절이 message를 '사용자에게
+    # 그대로 노출 가능한 한국어'로 못박았기 때문에 길이 검사도 아래 validator로 옮겼다.
+    password: str = Field(
+        description=f"{MIN_PASSWORD_LENGTH}자 이상이며 영문, 숫자, 특수문자를 각각 1개 이상 포함",
+    )
 
     @field_validator("password")
     @classmethod
-    def validate_password_byte_length(cls, value: str) -> str:
-        """bcrypt가 처리할 수 있는 길이인지 바이트 단위로 검사한다.
+    def validate_password_policy(cls, value: str) -> str:
+        """비밀번호의 길이·구성 규칙과 bcrypt의 내부 길이 제한을 검사한다.
 
-        Field(max_length=...)는 '글자 수'를 세지만 bcrypt의 한계는 '바이트 수'다.
-        한글은 UTF-8에서 한 글자가 3바이트라, 글자 수만 검사하면 통과한 값이
-        해싱 단계에서 터진다. 그래서 여기서 인코딩 후 길이를 직접 확인한다.
+        Args:
+            value: 사용자가 입력한 평문 비밀번호.
+
+        Returns:
+            검증을 통과한 비밀번호 원본.
+
+        Raises:
+            ValueError: 규칙을 어겼을 때. 문구는 화면에 그대로 노출된다.
         """
+        # 바이트 검사를 가장 먼저 한다. Field(max_length=...)는 '글자 수'를 세지만
+        # bcrypt의 한계는 '바이트 수'다. 한글은 UTF-8에서 한 글자가 3바이트라,
+        # 글자 수만 검사하면 통과한 값이 해싱 단계에서 터진다.
         if len(value.encode("utf-8")) > MAX_PASSWORD_BYTES:
-            raise ValueError(f"비밀번호는 UTF-8 기준 {MAX_PASSWORD_BYTES}바이트를 넘을 수 없습니다.")
+            raise ValueError("비밀번호가 너무 깁니다. 조금 짧게 입력해 주세요.")
+        if len(value) < MIN_PASSWORD_LENGTH:
+            raise ValueError(f"비밀번호는 {MIN_PASSWORD_LENGTH}자 이상이어야 합니다.")
+        if not (
+            any(character in ascii_letters for character in value)
+            and any(character in digits for character in value)
+            and any(character in SPECIAL_CHARACTERS for character in value)
+        ):
+            raise ValueError("비밀번호는 영문, 숫자, 특수문자를 각각 1개 이상 포함해야 합니다.")
         return value
 
     @field_validator("nickname")

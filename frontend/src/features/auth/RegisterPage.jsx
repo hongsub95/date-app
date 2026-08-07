@@ -3,6 +3,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/contexts/AuthContext'
 import './auth.css'
 
+const SPECIAL_CHARACTERS = `!"#$%&'()*+,-./:;<=>?@[\\]^_\`{|}~`
+
+function satisfiesPasswordPolicy(value) {
+  return value.length >= 9
+    && /[A-Za-z]/.test(value)
+    && /[0-9]/.test(value)
+    && [...value].some((character) => SPECIAL_CHARACTERS.includes(character))
+}
+
 export default function RegisterPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
@@ -13,6 +22,10 @@ export default function RegisterPage() {
     e.preventDefault()
     if (!form.nickname || !form.email || !form.password) {
       setError('모든 항목을 입력해주세요.')
+      return
+    }
+    if (!satisfiesPasswordPolicy(form.password)) {
+      setError('비밀번호는 9자 이상이며 영문, 숫자, 특수문자를 각각 1개 이상 포함해 주세요.')
       return
     }
     if (form.password !== form.confirm) {
@@ -62,6 +75,7 @@ export default function RegisterPage() {
             className="auth-form__input"
             placeholder="비밀번호"
           />
+          <p className="auth-form__hint">9자 이상 · 영문, 숫자, 특수문자 포함</p>
         </div>
         <div className="auth-form__field">
           <label className="auth-form__label">비밀번호 확인</label>

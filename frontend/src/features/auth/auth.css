@@ -63,6 +63,11 @@
   color: var(--color-primary);
 }
 
+.auth-form__hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
 .auth-form__submit {
   margin-top: 8px;
   width: 100%;

@@ -8,6 +8,17 @@ import { getApiError } from '@/shared/api/api-error';
 import { utf8ByteLength } from '@/shared/utils/text';
 import { colors, spacing } from '@/shared/theme';
 
+const SPECIAL_CHARACTERS = `!"#$%&'()*+,-./:;<=>?@[\\]^_\`{|}~`;
+
+function satisfiesPasswordPolicy(value: string) {
+  return (
+    value.length >= 9 &&
+    /[A-Za-z]/.test(value) &&
+    /[0-9]/.test(value) &&
+    [...value].some((character) => SPECIAL_CHARACTERS.includes(character))
+  );
+}
+
 type FieldErrors = Partial<Record<'email' | 'nickname' | 'password', string>>;
 
 export default function RegisterScreen() {
@@ -22,8 +33,10 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     const errors: FieldErrors = {};
-    if (password.length < 8) errors.password = '비밀번호는 8자 이상이어야 합니다.';
-    if (utf8ByteLength(password) > 72) errors.password = '비밀번호는 UTF-8 기준 72바이트 이하여야 합니다.';
+    if (!satisfiesPasswordPolicy(password)) {
+      errors.password = '9자 이상이며 영문, 숫자, 특수문자를 각각 1개 이상 포함해 주세요.';
+    }
+    if (utf8ByteLength(password) > 72) errors.password = '비밀번호가 너무 깁니다. 조금 짧게 입력해주세요.';
     if (nickname.trim().length < 2) errors.nickname = '닉네임은 2자 이상이어야 합니다.';
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
@@ -65,7 +78,7 @@ export default function RegisterScreen() {
 
           <Text style={styles.label}>비밀번호</Text>
           <TextInput onChangeText={setPassword} secureTextEntry style={styles.input} value={password} />
-          <Text style={styles.hint}>8자 이상, UTF-8 기준 최대 72바이트 · 한글만 사용하면 최대 24자</Text>
+          <Text style={styles.hint}>9자 이상 · 영문, 숫자, 특수문자 포함</Text>
           {fieldErrors.password ? <Text style={styles.error}>{fieldErrors.password}</Text> : null}
           {generalError ? <Text style={styles.error}>{generalError}</Text> : null}
 
