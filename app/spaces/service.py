@@ -6,7 +6,7 @@
 
 import uuid as uuid_module
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -85,7 +85,9 @@ def list_my_spaces(db: Session, user: User) -> list[SpaceResponse]:
             SpaceMember.status == SPACE_MEMBER_STATUS_ACTIVE,
             Space.archived_at.is_(None),
         )
-        .order_by(Space.type.desc(), Space.created_at)
+        # 개인 스페이스를 항상 맨 위에 고정한다. 알파벳 순서에 기대지 않고 명시적으로
+        # 지정하는 이유: type 값이 바뀌면 정렬이 조용히 뒤집히기 때문이다.
+        .order_by(case((Space.type == SPACE_TYPE_PERSONAL, 0), else_=1), Space.created_at)
     ).all()
 
     return [to_response(db, space, user, role) for space, role in rows]
@@ -246,7 +248,8 @@ def list_members(db: Session, space: Space) -> list[SpaceMemberResponse]:
             SpaceMember.space_id == space.id,
             SpaceMember.status == SPACE_MEMBER_STATUS_ACTIVE,
         )
-        .order_by(SpaceMember.role, SpaceMember.joined_at)
+        # owner를 맨 위에 고정한다. role 문자열의 알파벳 순서에 기대지 않는다.
+        .order_by(case((SpaceMember.role == SPACE_ROLE_OWNER, 0), else_=1), SpaceMember.joined_at)
     ).all()
 
     return [
