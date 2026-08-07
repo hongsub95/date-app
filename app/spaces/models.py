@@ -41,6 +41,12 @@ SPACE_ROLE_OWNER = "owner"
 SPACE_ROLE_MEMBER = "member"
 
 SPACE_MEMBER_STATUS_ACTIVE = "active"
+SPACE_MEMBER_STATUS_LEFT = "left"
+SPACE_MEMBER_STATUS_REMOVED = "removed"
+
+# 공유 스페이스 최대 멤버 수 (명세 16절 권장값).
+# 운영 중 조정할 수 있도록 상수로 둔다.
+SHARED_SPACE_MAX_MEMBERS = 20
 
 
 class Space(Base):
