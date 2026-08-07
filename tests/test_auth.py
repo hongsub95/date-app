@@ -20,7 +20,7 @@ from app.users.models import User
 VALID_PAYLOAD = {
     "email": "hong@example.com",
     "nickname": "홍섭",
-    "password": "password1234",
+    "password": "Password1234!",
 }
 
 
@@ -101,11 +101,29 @@ def test_register_duplicate_nickname(client: TestClient) -> None:
 
 
 def test_register_short_password(client: TestClient) -> None:
-    response = register(client, password="1234")
+    """길이 미달 오류도 한국어 문구로 나가야 한다.
+
+    길이 검사를 Field(min_length=...)에 맡기면 pydantic이 "String should have at
+    least 9 characters"라는 영어 문구를 응답에 실어 보낸다. API_SPEC 2.5절은
+    message를 화면에 그대로 노출한다고 정의했으므로 여기서 한국어인지 못박는다.
+    """
+    response = register(client, password="Abcde1!x")
 
     assert response.status_code == 422
     assert response.json()["code"] == "VALIDATION_ERROR"
     assert response.json()["field"] == "password"
+    assert response.json()["message"] == "비밀번호는 9자 이상이어야 합니다."
+
+
+def test_register_password_requires_english_number_and_special_character(client: TestClient) -> None:
+    invalid_passwords = ("12345678!", "Password!", "Password1")
+
+    for password in invalid_passwords:
+        response = register(client, password=password)
+
+        assert response.status_code == 422
+        assert response.json()["code"] == "VALIDATION_ERROR"
+        assert response.json()["field"] == "password"
 
 
 def test_register_password_over_bcrypt_byte_limit(client: TestClient) -> None:

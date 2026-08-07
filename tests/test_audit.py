@@ -13,7 +13,7 @@ from app.audit.models import AuditAction, AuditLog
 PAYLOAD = {
     "email": "audit@example.com",
     "nickname": "감사테스트",
-    "password": "password1234",
+    "password": "Password1234!",
 }
 
 

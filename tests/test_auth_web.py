@@ -15,7 +15,7 @@ settings = get_settings()
 VALID_PAYLOAD = {
     "email": "web@example.com",
     "nickname": "웹사용자",
-    "password": "password1234",
+    "password": "Password1234!",
 }
 
 

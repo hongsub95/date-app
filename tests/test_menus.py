@@ -13,7 +13,7 @@ from app.menus.models import MENU_SCOPE_ADMIN, MENU_SCOPE_APP, MENU_ROLE_ADMIN, 
 REGISTER_PAYLOAD = {
     "email": "menu@example.com",
     "nickname": "메뉴테스트",
-    "password": "password1234",
+    "password": "Password1234!",
 }
 
 
