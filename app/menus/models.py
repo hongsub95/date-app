@@ -23,10 +23,9 @@ from app.core.database import Base
 MENU_SCOPE_APP = "app"
 MENU_SCOPE_ADMIN = "admin"
 
-# 관리자 메뉴 노출에 필요한 권한. NULL이면 로그인한 사용자 누구나 볼 수 있다.
-# 실제 권한 검사는 users.role 컬럼이 추가된 뒤에 연결한다 (관리자 페이지 구현 시점).
-MENU_ROLE_ADMIN = "admin"
-MENU_ROLE_SUPER_ADMIN = "super_admin"
+# 메뉴 노출 권한은 nl_users.role과 같은 정수 코드를 쓴다 (app/users/models.py의 USER_ROLE_*).
+# 문자열('admin')로 두면 int인 users.role과 절대 같아지지 않아 관리자 메뉴가
+# 아무에게도 안 보이는 상태가 된다.
 
 
 class Menu(Base):
@@ -67,10 +66,9 @@ class Menu(Base):
     # 통계가 함께 사라지므로, 운영 중에는 삭제보다 비활성화를 쓴다.
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="true")
 
-    # 이 메뉴를 보려면 필요한 권한. NULL이면 제한 없음.
-    # 관리자 메뉴를 권한별로 다르게 보여주기 위한 것이며,
-    # users.role 컬럼이 생기면 조회 시 이 값과 대조한다.
-    required_role: Mapped[str | None] = mapped_column(String(20))
+    # 이 메뉴를 보려면 필요한 권한 등급. NULL이면 제한 없음.
+    # nl_users.role과 값을 정확히 대조한다(예: 0을 넣으면 마스터에게만 보인다).
+    required_role: Mapped[int | None] = mapped_column()
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())

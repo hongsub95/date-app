@@ -15,7 +15,7 @@ from app.spaces.models import (
     Space,
     SpaceMember,
 )
-from app.users.models import User
+from app.users.models import USER_ROLE_MASTER, USER_ROLE_USER, User
 
 VALID_PAYLOAD = {
     "email": "hong@example.com",
@@ -50,12 +50,28 @@ def test_register_success(client: TestClient) -> None:
     body = response.json()
     assert body["user"]["email"] == VALID_PAYLOAD["email"]
     assert body["user"]["nickname"] == VALID_PAYLOAD["nickname"]
+    # 가입으로는 절대 마스터가 만들어지면 안 된다. 등급 상승은 운영자가 DB에서만 한다.
+    assert body["user"]["role"] == USER_ROLE_USER
     # 가입 직후 바로 로그인 상태가 되도록 토큰이 함께 와야 한다.
     assert body["tokens"]["access_token"]
     assert body["tokens"]["refresh_token"]
     # 비밀번호 해시는 어떤 경우에도 응답에 나가면 안 된다.
     assert "password" not in body["user"]
     assert "password_hash" not in body["user"]
+
+
+def test_register_cannot_self_assign_master_role(client: TestClient, db_session: Session) -> None:
+    """요청 본문에 role을 끼워 넣어도 마스터가 되면 안 된다.
+
+    RegisterRequest에 role 필드가 없으므로 pydantic이 조용히 버리지만, 나중에 누군가
+    스키마에 role을 추가하면 권한 상승 구멍이 된다. 그 순간을 여기서 잡는다.
+    """
+    response = register(client, role=USER_ROLE_MASTER)
+
+    assert response.status_code == 201
+    assert response.json()["user"]["role"] == USER_ROLE_USER
+    user = db_session.scalar(select(User).where(User.email == VALID_PAYLOAD["email"]))
+    assert user.role == USER_ROLE_USER
 
 
 def test_register_creates_personal_space(client: TestClient, db_session: Session) -> None:
@@ -116,7 +132,9 @@ def test_register_short_password(client: TestClient) -> None:
 
 
 def test_register_password_requires_english_number_and_special_character(client: TestClient) -> None:
-    invalid_passwords = ("12345678!", "Password!", "Password1")
+    # 순서대로 영문 없음 / 숫자 없음 / 특수문자 없음. 마지막 둘은 공백과 한글이
+    # 각각 특수문자·영문으로 인정되지 않는다는 것까지 확인한다.
+    invalid_passwords = ("12345678!", "Password!", "Password1", "Password 1234", "비밀번호가나다1!")
 
     for password in invalid_passwords:
         response = register(client, password=password)
@@ -124,6 +142,14 @@ def test_register_password_requires_english_number_and_special_character(client:
         assert response.status_code == 422
         assert response.json()["code"] == "VALIDATION_ERROR"
         assert response.json()["field"] == "password"
+        assert response.json()["message"] == "비밀번호는 영문, 숫자, 특수문자를 각각 1개 이상 포함해야 합니다."
+
+
+def test_register_password_allows_korean_mixed_with_english(client: TestClient) -> None:
+    """한글만 쓰는 건 막지만, 영문·숫자·특수문자를 갖췄다면 한글이 섞여도 가입된다."""
+    response = register(client, password="비밀번호Abc1!")
+
+    assert response.status_code == 201
 
 
 def test_register_password_over_bcrypt_byte_limit(client: TestClient) -> None:
@@ -136,6 +162,9 @@ def test_register_password_over_bcrypt_byte_limit(client: TestClient) -> None:
 
     assert response.status_code == 422
     assert response.json()["field"] == "password"
+    # 이 값은 구성 규칙(영문·숫자·특수문자)도 함께 어기지만, 바이트 검사를 먼저 하므로
+    # 길이 안내가 나가야 한다. API_SPEC 3.2절에 명시한 검사 순서와 같다.
+    assert response.json()["message"] == "비밀번호가 너무 깁니다. 조금 짧게 입력해 주세요."
 
 
 def test_register_invalid_email(client: TestClient) -> None:

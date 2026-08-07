@@ -103,6 +103,9 @@ class UserResponse(BaseModel):
     id: int
     email: EmailStr
     nickname: str
+    # 권한 등급 (0=마스터, 1=일반). 관리자 화면 진입 여부를 클라이언트가 판단할 때 쓴다.
+    # 실제 접근 차단은 서버가 하므로, 이 값은 메뉴를 감추는 용도로만 쓰고 신뢰하지 않는다.
+    role: int
     # 앱 실행 시 열어야 할 스페이스. 클라이언트는 로그인 후 이 값으로 첫 화면을 구성한다.
     default_space_id: int | None
     created_at: datetime

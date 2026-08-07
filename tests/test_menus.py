@@ -8,7 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.menus.models import MENU_SCOPE_ADMIN, MENU_SCOPE_APP, MENU_ROLE_ADMIN, Menu
+from app.menus.models import MENU_SCOPE_ADMIN, MENU_SCOPE_APP, Menu
+from app.users.models import USER_ROLE_MASTER, User
 
 REGISTER_PAYLOAD = {
     "email": "menu@example.com",
@@ -31,9 +32,22 @@ def app_menus(db_session: Session) -> None:
 
 
 def auth_header(client: TestClient) -> dict[str, str]:
-    """회원가입 후 인증 헤더를 만든다."""
+    """회원가입 후 인증 헤더를 만든다. 가입 계정은 항상 일반 회원(role=1)이다."""
     token = client.post("/api/v1/auth/register", json=REGISTER_PAYLOAD).json()["tokens"]["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+def master_auth_header(client: TestClient, db_session: Session) -> dict[str, str]:
+    """마스터 권한(role=0)으로 승격한 계정의 인증 헤더를 만든다.
+
+    회원가입 API로는 마스터를 만들 수 없으므로(항상 일반 회원으로 생성된다)
+    가입 후 DB에서 직접 등급을 올린다. 운영에서는 마이그레이션이 이 역할을 한다.
+    """
+    header = auth_header(client)
+    user = db_session.query(User).filter(User.email == REGISTER_PAYLOAD["email"]).one()
+    user.role = USER_ROLE_MASTER
+    db_session.commit()
+    return header
 
 
 # ── 기본 조회 ─────────────────────────────────────
@@ -152,27 +166,48 @@ def test_leaf_menu_has_empty_children(client: TestClient, app_menus: None) -> No
 # ── 권한 ──────────────────────────────────────────
 
 
-def test_role_restricted_menu_is_hidden_without_role(
-    client: TestClient, db_session: Session
-) -> None:
-    """권한이 필요한 메뉴는 권한 없는 사용자에게 보이면 안 된다."""
+def _admin_menus(db_session: Session) -> None:
+    """제한 없는 메뉴 하나와 마스터 전용 메뉴 하나를 만든다."""
     db_session.add_all(
         [
             Menu(code="admin_open", scope=MENU_SCOPE_ADMIN, name="공개", sort_order=1),
             Menu(
                 code="admin_secret",
                 scope=MENU_SCOPE_ADMIN,
-                name="관리자 전용",
+                name="마스터 전용",
                 sort_order=2,
-                required_role=MENU_ROLE_ADMIN,
+                required_role=USER_ROLE_MASTER,
             ),
         ]
     )
     db_session.commit()
 
+
+def test_role_restricted_menu_is_hidden_without_role(
+    client: TestClient, db_session: Session
+) -> None:
+    """권한이 필요한 메뉴는 권한 없는 사용자에게 보이면 안 된다."""
+    _admin_menus(db_session)
+
     menus = client.get("/api/v1/menus?scope=admin", headers=auth_header(client)).json()["menus"]
 
     assert [m["code"] for m in menus] == ["admin_open"]
+
+
+def test_role_restricted_menu_is_visible_to_master(
+    client: TestClient, db_session: Session
+) -> None:
+    """등급이 일치하면 제한 메뉴가 보여야 한다.
+
+    required_role과 users.role의 타입이 어긋나면(문자열 vs 정수) 이 비교가 영원히
+    False가 되어 관리자 메뉴가 아무에게도 안 보인다. 그 회귀를 잡는 테스트다.
+    """
+    _admin_menus(db_session)
+    headers = master_auth_header(client, db_session)
+
+    menus = client.get("/api/v1/menus?scope=admin", headers=headers).json()["menus"]
+
+    assert [m["code"] for m in menus] == ["admin_open", "admin_secret"]
 
 
 def test_child_is_hidden_when_parent_is_restricted(
@@ -185,9 +220,9 @@ def test_child_is_hidden_when_parent_is_restricted(
     parent = Menu(
         code="admin_secret",
         scope=MENU_SCOPE_ADMIN,
-        name="관리자 전용",
+        name="마스터 전용",
         sort_order=1,
-        required_role=MENU_ROLE_ADMIN,
+        required_role=USER_ROLE_MASTER,
     )
     db_session.add(parent)
     db_session.flush()

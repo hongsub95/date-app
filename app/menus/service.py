@@ -7,13 +7,13 @@ from app.menus.models import MENU_SCOPE_APP, Menu
 from app.menus.schemas import MenuResponse
 
 
-def get_menu_tree(db: Session, scope: str = MENU_SCOPE_APP, role: str | None = None) -> list[MenuResponse]:
+def get_menu_tree(db: Session, scope: str = MENU_SCOPE_APP, role: int | None = None) -> list[MenuResponse]:
     """지정한 영역의 활성 메뉴를 트리 형태로 돌려준다.
 
     :param db: DB 세션
     :param scope: "app"(앱 하단 탭) 또는 "admin"(관리자 메뉴)
-    :param role: 요청자의 권한. required_role이 걸린 메뉴는 권한이 맞을 때만 포함한다.
-        None이면 권한 제한이 없는 메뉴만 나온다.
+    :param role: 요청자의 권한 등급(USER_ROLE_*). required_role이 걸린 메뉴는 권한이
+        맞을 때만 포함한다. None이면 권한 제한이 없는 메뉴만 나온다.
     :return: 최상위 메뉴 목록. 하위 메뉴는 각 항목의 children에 들어간다.
     """
     # 전체를 한 번에 읽고 메모리에서 트리를 만든다. 계층을 따라 재귀 질의를 하면
@@ -47,12 +47,12 @@ def get_menu_tree(db: Session, scope: str = MENU_SCOPE_APP, role: str | None = N
     return roots
 
 
-def _is_visible(menu: Menu, role: str | None) -> bool:
+def _is_visible(menu: Menu, role: int | None) -> bool:
     """요청자의 권한으로 이 메뉴를 볼 수 있는지 판단한다.
 
-    required_role이 없으면 누구나 볼 수 있고, 있으면 권한이 정확히 일치해야 한다.
-    등급 간 포함 관계(예: super_admin이 admin 메뉴도 봄)는 users.role 컬럼과
-    권한 체계가 확정된 뒤에 정한다.
+    required_role이 없으면 누구나 볼 수 있고, 있으면 등급이 정확히 일치해야 한다.
+    등급 간 포함 관계(예: 마스터가 관리자 메뉴도 봄)는 중간 등급이 생길 때 정한다.
+    지금은 등급이 마스터(0)와 일반(1) 둘뿐이라 포함 관계를 정의할 대상이 없다.
     """
     if menu.required_role is None:
         return True

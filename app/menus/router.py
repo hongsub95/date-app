@@ -33,7 +33,4 @@ def list_menus(
     scope: Annotated[str, Query(pattern=f"^({MENU_SCOPE_APP}|{MENU_SCOPE_ADMIN})$")] = MENU_SCOPE_APP,
 ) -> MenuListResponse:
     """메뉴 목록 조회. 로그인한 사용자만 호출할 수 있다."""
-    # 권한 체계(users.role)는 관리자 페이지 구현 시 추가한다. 그때까지는 권한 제한이
-    # 걸리지 않은 메뉴만 내려간다.
-    role = getattr(current_user, "role", None)
-    return MenuListResponse(menus=service.get_menu_tree(db, scope=scope, role=role))
+    return MenuListResponse(menus=service.get_menu_tree(db, scope=scope, role=current_user.role))

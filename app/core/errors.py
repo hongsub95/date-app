@@ -49,6 +49,24 @@ def _error_body(code: str, message: str, field: str | None = None) -> dict[str, 
     return {"code": code, "message": message, "field": field}
 
 
+def _validation_message(error: dict) -> str:
+    """Pydantic 검증 오류 하나를 사용자에게 보여줄 문구로 바꾼다.
+
+    :param error: `RequestValidationError.errors()`가 돌려주는 항목 하나
+    :return: 화면에 그대로 노출할 수 있는 문구
+
+    스키마의 validator가 `raise ValueError("비밀번호는 9자 이상...")`을 하면 pydantic은
+    msg에 `Value error, ` 접두사를 붙여 준다. 이 문구는 그대로 화면에 나가므로
+    접두사가 보이면 안 된다. 다행히 ctx["error"]에 원본 예외가 그대로 담겨 있어서
+    거기서 우리가 쓴 문구만 꺼낸다. 이메일 형식처럼 pydantic 내장 검사에서 난
+    오류는 ctx가 없으므로 msg를 그대로 쓴다.
+    """
+    original = error.get("ctx", {}).get("error")
+    if original is not None:
+        return str(original)
+    return error.get("msg", "입력값을 확인해 주세요.")
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """FastAPI 앱에 오류 핸들러를 등록한다. main.py에서 앱 생성 직후 한 번 호출한다."""
 
@@ -78,7 +96,7 @@ def register_error_handlers(app: FastAPI) -> None:
 
         body = _error_body(
             code="VALIDATION_ERROR",
-            message=first.get("msg", "입력값을 확인해 주세요."),
+            message=_validation_message(first) if first else "입력값을 확인해 주세요.",
             field=field,
         )
         body["details"] = [
@@ -87,7 +105,7 @@ def register_error_handlers(app: FastAPI) -> None:
                     str(part) for part in err.get("loc", []) if part not in ("body", "query", "path")
                 )
                 or None,
-                "message": err.get("msg", ""),
+                "message": _validation_message(err),
             }
             for err in errors
         ]
